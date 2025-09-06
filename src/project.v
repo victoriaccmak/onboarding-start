@@ -26,6 +26,7 @@ module tt_um_uwasic_onboarding_victoria_mak (
     wire a;
     wire b;
     wire y;
+    wire [15:0] pwm_out;
 
   pwm_peripheral pwm_peripheral_inst (
     .clk(clk),
@@ -35,9 +36,12 @@ module tt_um_uwasic_onboarding_victoria_mak (
     .en_reg_pwm_7_0(en_reg_pwm_7_0),
     .en_reg_pwm_15_8(en_reg_pwm_15_8),
     .pwm_duty_cycle(pwm_duty_cycle),
-    .out({uio_out, uo_out})
+    .out(pwm_out)
   );
-  
+    
+    assign uo_out  = pwm_out[7:0];
+    assign uio_out = pwm_out[15:8];
+
   spi_peripheral spi_peripheral_inst (
     .a(a),
     .b(b),
