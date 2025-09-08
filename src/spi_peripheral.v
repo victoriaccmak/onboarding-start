@@ -25,7 +25,7 @@ module spi_peripheral (
     reg ff_copi;
 
     // Cycle counter, read/write, address, and data
-    reg [3:0] ff_sclk_counter;
+    reg [4:0] ff_sclk_counter;
     reg [15:0] bitstream;
 
     // Flip flops for clk
@@ -34,13 +34,15 @@ module spi_peripheral (
             // Reset all flip flop values to 0
             sclk_sync_ff1 <= 1'b0;
             sclk_sync_ff2 <= 1'b0;
-            ncs_sync_ff1 <= 1'b0;
-            ncs_sync_ff2 <= 1'b0;
+            ncs_sync_ff1 <= 1'b1;
+            ncs_sync_ff2 <= 1'b1;
             copi_sync_ff1 <= 1'b0;
             copi_sync_ff2 <= 1'b0;
             ff_sclk <= 1'b0;
-            ff_ncs <= 1'b0;
+            ff_ncs <= 1'b1;
             ff_copi <= 1'b0;
+            ff_sclk_counter <= 0;
+            bitstream <= 16'h0000;
         end else begin
             //Assign the 1st and 2nd flip flop values of sclk, ncs, and copi
             sclk_sync_ff1 <= sclk;
@@ -54,20 +56,22 @@ module spi_peripheral (
             ff_sclk <= sclk_sync_ff2;
             ff_ncs <= ncs_sync_ff2;
             ff_copi <= copi_sync_ff2;
-        end
-    end
 
-    // Flip flop sclk to read copi at positive edges
-    always @(posedge ff_sclk or negedge ff_ncs) begin
-        if (!ff_sclk) begin
-            ff_sclk_counter <= 0;
-            bitstream <= 16'h0000;
-        end
-        // Read the bitstream when ncs is low
-        if (!ff_ncs) begin
-            bitstream <= bitstream << 1;
-            bitstream[0] <= ff_copi;
-            ff_sclk_counter <= ff_sclk_counter + 1;
+            // Reset bitstream and the counter at nCS falling edge
+            if (!ff_ncs and ncs_sync_ff2) begin
+                ff_sclk_counter <= 0;
+                bitstream <= 16'h0000;
+            end
+
+            // At every positive ff_sclk edge, get the bitstream and increase the counter
+            if (ff_sclk and !sclk_sync_ff2) begin
+                // Read the bitstream when ncs is low
+                if (!ff_ncs) begin
+                    bitstream <= bitstream << 1;
+                    bitstream[0] <= ff_copi;
+                    ff_sclk_counter <= ff_sclk_counter + 1;
+                end
+            end
         end
     end
 
@@ -77,7 +81,7 @@ module spi_peripheral (
     // Update the registers once the bitstream is complete ie. when ncs has been pulled up
     always @(posedge ff_ncs) begin
         // Write to the address if the leading bit is 1 (representing a Write operation)
-        if (bitstream[15]) begin
+        if (ff_sclk_counter == 5'b10000) begin
             address <= {1'b0, bitstream[14:8]};
             data <= bitstream[7:0];
 
