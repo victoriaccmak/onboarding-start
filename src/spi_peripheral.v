@@ -24,6 +24,9 @@ module spi_peripheral (
     reg ff_ncs;
     reg ff_copi;
 
+    //Delayed nCS
+    reg ff_ncs_d;
+
     // Cycle counter, read/write, address, and data
     reg [3:0] ff_sclk_counter;
     reg [15:0] bitstream;
@@ -59,21 +62,19 @@ module spi_peripheral (
 
     // On the negative edge of ncs, initialize the counter to 0
     always @(negedge ff_ncs) begin
-        ff_sclk_counter <= 0;
+        transaction_running <= 1'b1;
     end
 
     // Flip flop sclk to read copi at positive edges
-    always @(posedge ff_sclk) begin
+    always @(posedge ff_sclk or negedge ff_ncs) begin
+        if (!ff_sclk or !rst_n) begin
+            ff_sclk_counter <= 0;
+            bitstream <= 8'h00;
+        end
         // Read the bitstream when ncs is low
         if (!ff_ncs) begin
             bitstream <= bitstream << 1;
             bitstream[0] <= ff_copi;
-        end
-    end
-
-    // Shift the counter for the cycle at every negative edge (cycle begins at low)
-    always @(negedge ff_sclk) begin
-        if (!ff_ncs) begin
             ff_sclk_counter <= ff_sclk_counter + 1;
         end
     end
