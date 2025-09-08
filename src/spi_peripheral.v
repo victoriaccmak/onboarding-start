@@ -60,14 +60,12 @@ module spi_peripheral (
         end
     end
 
-    // On the negative edge of ncs, initialize the counter to 0
-    always @(negedge ff_ncs) begin
-        transaction_running <= 1'b1;
-    end
-
     // Flip flop sclk to read copi at positive edges
     always @(posedge ff_sclk or negedge ff_ncs) begin
-        if (!ff_sclk or !rst_n) begin
+        if (!ff_sclk) begin
+            ff_sclk_counter <= 0;
+            bitstream <= 8'h00;
+        end else if (!rst_n) begin
             ff_sclk_counter <= 0;
             bitstream <= 8'h00;
         end
