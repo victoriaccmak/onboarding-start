@@ -15,18 +15,29 @@ module tt_um_uwasic_onboarding_victoria_mak (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
-    assign uio_oe = 8'hFF;      // Set all IOs to output
-    
-    wire [7:0] en_reg_out_7_0;
-    wire [7:0] en_reg_out_15_8;
-    wire [7:0] en_reg_pwm_7_0;
-    wire [7:0] en_reg_pwm_15_8;
-    wire [7:0] pwm_duty_cycle;
+  
+  assign uio_oe = 8'hFF;      // Set all IOs to output
 
-    // wire a;
-    // wire b;
-    // wire y;
-    wire [15:0] pwm_out;
+  wire [7:0] en_reg_out_7_0;
+  wire [7:0] en_reg_out_15_8;
+  wire [7:0] en_reg_pwm_7_0;
+  wire [7:0] en_reg_pwm_15_8;
+  wire [7:0] pwm_duty_cycle;
+  
+  wire [15:0] pwm_out;
+
+  spi_peripheral spi_peripheral_inst (
+    .copi(ui_in[1]),
+    .ncs(ui_in[2]),
+    .sclk(ui_in[0]),
+    .en_reg_out_7_0(en_reg_out_7_0),
+    .en_reg_out_15_8(en_reg_out_15_8),
+    .en_reg_pwm_7_0(en_reg_pwm_7_0),
+    .en_reg_pwm_15_8(en_reg_pwm_15_8),
+    .pwm_duty_cycle(pwm_duty_cycle),
+    .clk(clk),
+    .rst_n(rst_n)
+  );
 
   pwm_peripheral pwm_peripheral_inst (
     .clk(clk),
@@ -38,15 +49,9 @@ module tt_um_uwasic_onboarding_victoria_mak (
     .pwm_duty_cycle(pwm_duty_cycle),
     .out(pwm_out)
   );
-    
-    assign uo_out  = pwm_out[7:0];
-    assign uio_out = pwm_out[15:8];
-
-  // spi_peripheral spi_peripheral_inst (
-  //   .a(a),
-  //   .b(b),
-  //   .y(y)
-  // );
+  
+  assign uo_out  = pwm_out[7:0];
+  assign uio_out = pwm_out[15:8];
 
   // Add uio_in and ui_in[7:3] to the list of unused signals:
   wire _unused = &{ena, ui_in[7:3], uio_in, 1'b0};
