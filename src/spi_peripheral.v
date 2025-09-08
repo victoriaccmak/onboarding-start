@@ -24,6 +24,10 @@ module spi_peripheral (
     reg ff_ncs;
     reg ff_copi;
 
+    // Cycle counter, read/write, address, and data
+    reg [3:0] ff_sclk_counter;
+    reg [15:0] bitstream;
+
     // Flip flops for clk
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -53,17 +57,10 @@ module spi_peripheral (
         end
     end
 
-
-    // Cycle counter, read/write, address, and data
-    reg [3:0] ff_sclk_counter;
-    reg [15:0] bitstream;
-
     // On the negative edge of ncs, initialize the counter to 0
     always @(negedge ff_ncs) begin
         ff_sclk_counter <= 0;
-        bitstream <= 0;
     end
-
 
     // Flip flop sclk to read copi at positive edges
     always @(posedge ff_sclk) begin
@@ -88,7 +85,7 @@ module spi_peripheral (
     always @(posedge ff_ncs) begin
         // Write to the address if the leading bit is 1 (representing a Write operation)
         if (bitstream[15]) begin
-            address <= bitstream[14:8];
+            address <= {1'b0, bitstream[14:8]};
             data <= bitstream[7:0];
 
             if (address == 8'h00) begin
