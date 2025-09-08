@@ -58,13 +58,13 @@ module spi_peripheral (
             ff_copi <= copi_sync_ff2;
 
             // Reset bitstream and the counter at nCS falling edge
-            if (!ff_ncs and ncs_sync_ff2) begin
+            if (!ff_ncs && ncs_sync_ff2) begin
                 ff_sclk_counter <= 0;
                 bitstream <= 16'h0000;
             end
 
             // At every positive ff_sclk edge, get the bitstream and increase the counter
-            if (ff_sclk and !sclk_sync_ff2) begin
+            if (ff_sclk && !sclk_sync_ff2) begin
                 // Read the bitstream when ncs is low
                 if (!ff_ncs) begin
                     bitstream <= bitstream << 1;
