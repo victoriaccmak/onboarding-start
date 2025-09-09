@@ -48,6 +48,11 @@ module spi_peripheral (
             ff_sclk_counter <= 0;
             bitstream <= 16'h0000;
             transaction_ready <= 0;
+            en_reg_out_7_0 <= 8'h00;
+            en_reg_out_15_8 <= 8'h00;
+            en_reg_pwm_7_0 <= 8'h00;
+            en_reg_pwm_15_8 <= 8'h00;
+            pwm_duty_cycle <= 8'h00;
             $display("RST_N: ff_sclk_counter=%0d, bitstream=%h, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
         end else begin
             //Assign the 1st and 2nd flip flop values of sclk, ncs, and copi
