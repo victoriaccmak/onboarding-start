@@ -48,7 +48,7 @@ module spi_peripheral (
             ff_sclk_counter <= 0;
             bitstream <= 16'h0000;
             transaction_ready <= 0;
-            $display("RST_N: Time=%t, ff_sclk_counter=%0d, bitstream=%h, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", $time, ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
+            $display("RST_N: ff_sclk_counter=%0d, bitstream=%h, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
         end else begin
             //Assign the 1st and 2nd flip flop values of sclk, ncs, and copi
             sclk_sync_ff1 <= sclk;
@@ -68,18 +68,18 @@ module spi_peripheral (
                 ff_sclk_counter <= 0;
                 bitstream <= 16'h0000;
                 transaction_ready <= 0;
-                $display("Pulling low: Time=%t, ff_sclk_counter=%0d, bitstream=%h, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", $time, ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
+                $display("Pulling low: ff_sclk_counter=%0d, bitstream=%h, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
             end
 
             if (!ff_ncs) begin
                 // At every positive ff_sclk edge, get the bitstream and increase the counter
                 if (!ff_sclk && sclk_sync_ff2) begin
                     // Read the bitstream when ncs is low
-                        $display("Before Positive ff_sclk edge: Time=%t, ff_sclk_counter=%0d, bitstream=%b, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", $time, ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
+                        $display("Before Positive ff_sclk edge: ff_sclk_counter=%0d, bitstream=%b, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
                         bitstream <= bitstream << 1;
                         bitstream[0] <= ff_copi;
                         ff_sclk_counter <= ff_sclk_counter + 1;
-                        $display("After Positive ff_sclk edge: Time=%t, ff_sclk_counter=%0d, bitstream=%b, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", $time, ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
+                        $display("After Positive ff_sclk edge: ff_sclk_counter=%0d, bitstream=%b, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
                 end
             end
 
