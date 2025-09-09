@@ -87,7 +87,7 @@ module spi_peripheral (
 
             // transaction done when nCS is pulled high
             if (!ff_ncs && ncs_sync_ff2 && ff_sclk_counter >= 5'b10000) begin
-                $display("TRANSACTION READY");data
+                $display("TRANSACTION READY");
                 address <= {1'b0, bitstream[14:8]};
                 data <= bitstream[7:0];
                 transaction_ready <= 1'b1;
