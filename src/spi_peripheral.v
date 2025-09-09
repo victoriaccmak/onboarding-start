@@ -28,6 +28,10 @@ module spi_peripheral (
     reg [4:0] ff_sclk_counter;
     reg [15:0] bitstream;
 
+    reg [7:0] address;
+    reg [7:0] data;
+    reg transaction_ready;
+
     // Flip flops for clk
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -43,6 +47,8 @@ module spi_peripheral (
             ff_copi <= 1'b0;
             ff_sclk_counter <= 0;
             bitstream <= 16'h0000;
+            transaction_ready <= 0;
+            // $display("RST_N: Time=%0t, ff_sclk_counter=%0d, bitstream=%h, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", $time, ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
         end else begin
             //Assign the 1st and 2nd flip flop values of sclk, ncs, and copi
             sclk_sync_ff1 <= sclk;
@@ -58,44 +64,60 @@ module spi_peripheral (
             ff_copi <= copi_sync_ff2;
 
             // Reset bitstream and the counter at nCS falling edge
-            if (!ff_ncs && ncs_sync_ff2) begin
+            if (ff_ncs && !ncs_sync_ff2) begin
                 ff_sclk_counter <= 0;
                 bitstream <= 16'h0000;
+                transaction_ready <= 0;
+                // $display("Pulling low: Time=%0t, ff_sclk_counter=%0d, bitstream=%h, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", $time, ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
             end
 
-            // At every positive ff_sclk edge, get the bitstream and increase the counter
-            if (ff_sclk && !sclk_sync_ff2) begin
-                // Read the bitstream when ncs is low
-                if (!ff_ncs) begin
-                    bitstream <= bitstream << 1;
-                    bitstream[0] <= ff_copi;
-                    ff_sclk_counter <= ff_sclk_counter + 1;
+            if (!ff_ncs) begin
+                // At every positive ff_sclk edge, get the bitstream and increase the counter
+                if (!ff_sclk && sclk_sync_ff2) begin
+                    // Read the bitstream when ncs is low
+                        // $display("Before Positive ff_sclk edge: Time=%0t, ff_sclk_counter=%0d, bitstream=%b, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", $time, ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
+                        bitstream <= bitstream << 1;
+                        bitstream[0] <= ff_copi;
+                        ff_sclk_counter <= ff_sclk_counter + 1;
+                        // $display("After Positive ff_sclk edge: Time=%0t, ff_sclk_counter=%0d, bitstream=%b, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", $time, ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
                 end
             end
-        end
-    end
 
-    reg [7:0] address;
-    reg [7:0] data;
+            // $display("ff_ncs=%b, ncs_sync_ff2=%b, ff_sclk_counter=%0d", ff_ncs, ncs_sync_ff2, ff_sclk_counter);
 
-    // Update the registers once the bitstream is complete ie. when ncs has been pulled up
-    always @(posedge ff_ncs) begin
-        // Write to the address if the leading bit is 1 (representing a Write operation)
-        if (ff_sclk_counter == 5'b10000) begin
-            address <= {1'b0, bitstream[14:8]};
-            data <= bitstream[7:0];
+            // transaction done when nCS is pulled high
+            if (!ff_ncs && ncs_sync_ff2 && ff_sclk_counter >= 5'b10000) begin
+                // $display("TRANSACTION READY");
+                address <= {1'b0, bitstream[14:8]};
+                data <= bitstream[7:0];
+                transaction_ready <= 1'b1;
+            end
 
-            if (address == 8'h00) begin
-                en_reg_out_7_0 <= data;
-            end else if (address == 8'h01) begin
-                en_reg_out_15_8 <= data;
-            end else if (address == 8'h02) begin
-                en_reg_pwm_7_0 <= data;
-            end else if (address == 8'h03) begin
-                en_reg_pwm_15_8 <= data;
-            end else if (address == 8'h04) begin
-                pwm_duty_cycle <= data;
+            // Update registers when transaction is ready
+            if (transaction_ready) begin
+                
+                // $display("12345");
+                // $display("address: %b", address);
+                if (address == 8'h00) begin
+                    // $display("1");
+                    en_reg_out_7_0 <= data;
+                end else if (address == 8'h01) begin
+                    // $display("2");
+                    en_reg_out_15_8 <= data;
+                end else if (address == 8'h02) begin
+                    // $display("3");
+                    en_reg_pwm_7_0 <= data;
+                end else if (address == 8'h03) begin
+                    // $display("4");
+                    en_reg_pwm_15_8 <= data;
+                end else if (address == 8'h04) begin
+                    // $display("5");
+                    pwm_duty_cycle <= data;
+                end
+
+                transaction_ready <= 0;
             end
         end
     end
+
 endmodule
