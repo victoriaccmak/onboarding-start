@@ -303,9 +303,9 @@ async def test_pwm_duty(dut):
     assert dut.uo_out.value == 0xFF, f"Expected 0xFF, got {dut.uo_out.value}"
         
     # 50% duty cycle
-    dut._log.info("Set PWM to 0% by writing 0b00000000 to register 0x04")
-    dut._log.info("Write transaction, address 0x04, data 0x00")
-    ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x00)  # Write transaction
+    dut._log.info("Set PWM to 50% by writing 0b00001111 to register 0x04")
+    dut._log.info("Write transaction, address 0x04, data 0x0F")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x0F)  # Write transaction
     await ClockCycles(dut.clk, 1000)
 
     for i in range(0, 8):
