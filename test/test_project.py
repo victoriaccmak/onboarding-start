@@ -304,8 +304,8 @@ async def test_pwm_duty(dut):
         
     # 50% duty cycle
     dut._log.info("Set PWM to 50% by writing 0b00001111 to register 0x04")
-    dut._log.info("Write transaction, address 0x04, data 0x0F")
-    ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x0F)  # Write transaction
+    dut._log.info("Write transaction, address 0x04, data 0x80")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x80)  # Write transaction
     await ClockCycles(dut.clk, 1000)
 
     for i in range(0, 8):
@@ -314,7 +314,7 @@ async def test_pwm_duty(dut):
         t_falling_edge = await check_uo_out_falling_edge(dut, i)
         t_rising_edge2 = await check_uo_out_rising_edge(dut, i)
 
-        high_time = t_rising_edge - t_falling_edge
+        high_time = t_falling_edge - t_rising_edge
         period = t_rising_edge2 - t_rising_edge
         duty_cycle = round(float(high_time) / period * 100, 0)
         assert duty_cycle == 50, f"Expected 50% PWM duty cycle, got {duty_cycle}"
