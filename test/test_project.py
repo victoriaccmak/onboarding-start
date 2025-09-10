@@ -102,7 +102,6 @@ async def check_uo_out_rising_edge(dut, bit_position) -> int:
         cur = (dut.uo_out.value.integer >> bit_position) & 1
         if prev == 0 and cur != 0:
             time = get_sim_time(units="ns")
-            dut._log.info(f"time: {time}")
             return time
         prev = cur
 
@@ -116,7 +115,6 @@ async def check_uo_out_falling_edge(dut, bit_position):
         cur = dut.uo_out.value.integer & (1 << bit_position)
         if prev != 0 and cur == 0:
             time = get_sim_time(units="ns")
-            dut._log.info(f"time: {time}")
             return time
         prev = cur
 
@@ -206,18 +204,15 @@ async def test_pwm_freq(dut):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 5)
 
-    dut._log.info("Enable outputs on uo_out[7:0] by writing 0b11111111 to register 0x00")
-    dut._log.info("Write transaction, address 0x00, data 0xFF")
+    dut._log.info("Enable outputs on uo_out[7:0]. Write transaction, address 0x00, data 0xFF")
     ui_in_val = await send_spi_transaction(dut, 1, 0x00, 0xFF)  # Write transaction
     await ClockCycles(dut.clk, 1000)
 
-    dut._log.info("Enable PWM on uo_out[7:0] by writing 0b11111111 to register 0x02")
-    dut._log.info("Write transaction, address 0x02, data 0xFF")
+    dut._log.info("Enable PWM on uo_out[7:0]. Write transaction, address 0x02, data 0xFF")
     ui_in_val = await send_spi_transaction(dut, 1, 0x02, 0xFF)  # Write transaction
     await ClockCycles(dut.clk, 1000)
     
-    dut._log.info("Set PWM to 50% by writing 0b00001111 to register 0x04")
-    dut._log.info("Write transaction, address 0x04, data 0x0F")
+    dut._log.info("Set PWM to 50%. Write transaction, address 0x04, data 0x0F")
     ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x0F)  # Write transaction
     await ClockCycles(dut.clk, 1000)
 
@@ -228,7 +223,6 @@ async def test_pwm_freq(dut):
         period_ns = t_rising_edge2 - t_rising_edge1
         frequency = 1 / (float(period_ns) * 0.000000001)
             
-        dut._log.info(f"frequency: {frequency}")
         assert frequency >= 2970 and frequency <= 3030, f"Expected frequency between 2970 and 3030 Hz, got {frequency} Hz"
     dut._log.info("PWM Frequency test completed successfully")
 
@@ -252,19 +246,16 @@ async def test_pwm_duty(dut):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 5)
 
-    dut._log.info("Enable outputs on uo_out[7:0] by writing 0b11111111 to register 0x00")
-    dut._log.info("Write transaction, address 0x00, data 0xFF")
+    dut._log.info("Enable outputs on uo_out[7:0]. Write transaction, address 0x00, data 0xFF")
     ui_in_val = await send_spi_transaction(dut, 1, 0x00, 0xFF)  # Write transaction
     await ClockCycles(dut.clk, 1000)
 
-    dut._log.info("Enable PWM on uo_out[7:0] by writing 0b11111111 to register 0x02")
-    dut._log.info("Write transaction, address 0x02, data 0xFF")
+    dut._log.info("Enable PWM on uo_out[7:0]. Write transaction, address 0x02, data 0xFF")
     ui_in_val = await send_spi_transaction(dut, 1, 0x02, 0xFF)  # Write transaction
     await ClockCycles(dut.clk, 1000)
     
     # 0% duty cycle
-    dut._log.info("Set PWM to 0% by writing 0b00000000 to register 0x04")
-    dut._log.info("Write transaction, address 0x04, data 0x00")
+    dut._log.info("Set PWM to 0%.Write transaction, address 0x04, data 0x00")
     ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x00)  # Write transaction
     await ClockCycles(dut.clk, 1000)
 
@@ -283,8 +274,7 @@ async def test_pwm_duty(dut):
     assert dut.uo_out.value == 0x00, f"Expected 0x00, got {dut.uo_out.value}"
         
     # 100% duty cycle
-    dut._log.info("Set PWM to 100% by writing 0b11111111 to register 0x04")
-    dut._log.info("Write transaction, address 0x04, data 0xFF")
+    dut._log.info("Set PWM to 100%. Write transaction, address 0x04, data 0xFF")
     ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0xFF)  # Write transaction
     await ClockCycles(dut.clk, 1000)
 
@@ -303,8 +293,7 @@ async def test_pwm_duty(dut):
     assert dut.uo_out.value == 0xFF, f"Expected 0xFF, got {dut.uo_out.value}"
         
     # 50% duty cycle
-    dut._log.info("Set PWM to 50% by writing 0b00001111 to register 0x04")
-    dut._log.info("Write transaction, address 0x04, data 0x80")
+    dut._log.info("Set PWM to 50%. Write transaction, address 0x04, data 0x80")
     ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x80)  # Write transaction
     await ClockCycles(dut.clk, 1000)
 

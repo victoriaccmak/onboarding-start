@@ -53,7 +53,6 @@ module spi_peripheral (
             en_reg_pwm_7_0 <= 8'h00;
             en_reg_pwm_15_8 <= 8'h00;
             pwm_duty_cycle <= 8'h00;
-            $display("RST_N: ff_sclk_counter=%0d, bitstream=%h, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
         end else begin
             //Assign the 1st and 2nd flip flop values of sclk, ncs, and copi
             sclk_sync_ff1 <= sclk;
@@ -73,26 +72,22 @@ module spi_peripheral (
                 ff_sclk_counter <= 0;
                 bitstream <= 16'h0000;
                 transaction_ready <= 0;
-                $display("Pulling low: ff_sclk_counter=%0d, bitstream=%h, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
             end
 
             if (!ff_ncs) begin
                 // At every positive ff_sclk edge, get the bitstream and increase the counter
                 if (!ff_sclk && sclk_sync_ff2) begin
                     // Read the bitstream when ncs is low
-                        $display("Before Positive ff_sclk edge: ff_sclk_counter=%0d, bitstream=%b, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
                         bitstream <= bitstream << 1;
                         bitstream[0] <= ff_copi;
                         ff_sclk_counter <= ff_sclk_counter + 1;
-                        $display("After Positive ff_sclk edge: ff_sclk_counter=%0d, bitstream=%b, ff_copi=%b, ff_ncs=%b, ff_sclk=%b", ff_sclk_counter, bitstream, ff_copi, ff_ncs, ff_sclk);
                 end
             end
 
-            $display("ff_ncs=%b, ncs_sync_ff2=%b, ff_sclk_counter=%0d", ff_ncs, ncs_sync_ff2, ff_sclk_counter);
+            // $display("ff_ncs=%b, ncs_sync_ff2=%b, ff_sclk_counter=%0d", ff_ncs, ncs_sync_ff2, ff_sclk_counter);
 
             // transaction done when nCS is pulled high
             if (!ff_ncs && ncs_sync_ff2 && ff_sclk_counter >= 5'b10000) begin
-                $display("TRANSACTION READY");
                 address <= {1'b0, bitstream[14:8]};
                 data <= bitstream[7:0];
                 transaction_ready <= 1'b1;
@@ -100,23 +95,15 @@ module spi_peripheral (
 
             // Update registers when transaction is ready
             if (transaction_ready) begin
-                $display("bitstream: %b", bitstream);
-                $display("address: %b", address);
-                $display("data: %b", data);
                 if (address == 8'h00) begin
-                    $display("1");
                     en_reg_out_7_0 <= data;
                 end else if (address == 8'h01) begin
-                    $display("2");
                     en_reg_out_15_8 <= data;
                 end else if (address == 8'h02) begin
-                    $display("3");
                     en_reg_pwm_7_0 <= data;
                 end else if (address == 8'h03) begin
-                    $display("4");
                     en_reg_pwm_15_8 <= data;
                 end else if (address == 8'h04) begin
-                    $display("5");
                     pwm_duty_cycle <= data;
                 end
 
