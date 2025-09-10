@@ -3,10 +3,12 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, FallingEdge
 from cocotb.triggers import ClockCycles
-from cocotb.types import Logic
+from cocotb.triggers import with_timeout, First
+# from cocotb.types import Logic
 from cocotb.types import LogicArray
+from cocotb.utils import get_sim_time
 
 async def await_half_sclk(dut):
     """Wait for the SCLK signal to go high or low."""
@@ -152,10 +154,138 @@ async def test_spi(dut):
 @cocotb.test()
 async def test_pwm_freq(dut):
     # Write your test here
+    # Reset
+    dut._log.info("Reset")
+    dut.ena.value = 1
+    ncs = 1
+    bit = 0
+    sclk = 0
+    dut.ui_in.value = ui_in_logicarray(ncs, bit, sclk)
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 5)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 5)
+
+    dut._log.info("Enable outputs on uo_out[7:0] by writing 0b11111111 to register 0x00")
+    dut._log.info("Write transaction, address 0x00, data 0xFF")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x00, 0xFF)  # Write transaction
+    await ClockCycles(dut.clk, 1000)
+
+    dut._log.info("Enable PWM on uo_out[7:0] by writing 0b11111111 to register 0x02")
+    dut._log.info("Write transaction, address 0x02, data 0xFF")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x02, 0xFF)  # Write transaction
+    await ClockCycles(dut.clk, 1000)
+    
+    dut._log.info("Set PWM to 50% by writing 0b00001111 to register 0x04")
+    dut._log.info("Write transaction, address 0x04, data 0x0F")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x0F)  # Write transaction
+    await ClockCycles(dut.clk, 1000)
+
+    for i in range(0, 8):
+        # Verify the period of the output
+        await RisingEdge(dut.uo_out[i])
+        t_rising_edge1 = get_sim_time(units="ns")
+        dut._log.info(f"t1: {t_rising_edge1}")
+
+        await RisingEdge(dut.uo_out[i])
+        t_rising_edge2 = get_sim_time(units="ns")
+        dut._log.info(f"t2: {t_rising_edge2}")
+
+        period_ns = t_rising_edge2 - t_rising_edge1
+        frequency = 1 / (float(period_ns) * 0.000000001)
+        
+        dut._log.info(f"frequency: {frequency}")
+        assert frequency >= 2970 and frequency <= 3030, f"Expected frequency between 2970 and 3030 Hz, got {frequency} Hz"
     dut._log.info("PWM Frequency test completed successfully")
 
 
 @cocotb.test()
 async def test_pwm_duty(dut):
     # Write your test here
+# Reset
+    dut._log.info("Reset")
+    dut.ena.value = 1
+    ncs = 1
+    bit = 0
+    sclk = 0
+    dut.ui_in.value = ui_in_logicarray(ncs, bit, sclk)
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 5)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 5)
+
+    dut._log.info("Enable outputs on uo_out[7:0] by writing 0b11111111 to register 0x00")
+    dut._log.info("Write transaction, address 0x00, data 0xFF")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x00, 0xFF)  # Write transaction
+    await ClockCycles(dut.clk, 1000)
+
+    dut._log.info("Enable PWM on uo_out[7:0] by writing 0b11111111 to register 0x02")
+    dut._log.info("Write transaction, address 0x02, data 0xFF")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x02, 0xFF)  # Write transaction
+    await ClockCycles(dut.clk, 1000)
+    
+    # 0% duty cycle
+    dut._log.info("Set PWM to 0% by writing 0b00000000 to register 0x04")
+    dut._log.info("Write transaction, address 0x04, data 0x00")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x00)  # Write transaction
+    await ClockCycles(dut.clk, 1000)
+
+    # Test for no edges
+    for i in range(0, 8):
+        try:
+            await with_timeout(
+                First(RisingEdge(dut.uo_out[i]), FallingEdge(dut.uo_out[i])),
+                timeout_time=10, timeout_unit="ms"
+            )
+            assert False, f"Expected no signal changes from 0% PWM, edge detected from uo_out[{i}]"
+        except Exception as e:
+            pass
+    
+    # Test the value of output
+    assert dut.uo_out.value == 0x00, f"Expected 0x00, got {dut.uo_out.value}"
+        
+    # 100% duty cycle
+    dut._log.info("Set PWM to 100% by writing 0b11111111 to register 0x04")
+    dut._log.info("Write transaction, address 0x04, data 0xFF")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0xFF)  # Write transaction
+    await ClockCycles(dut.clk, 1000)
+
+    # Test for no edges
+    for i in range(0, 8):
+        try:
+            await with_timeout(
+                First(RisingEdge(dut.uo_out[i]), FallingEdge(dut.uo_out[i])),
+                timeout_time=10, timeout_unit="ms"
+            )
+            assert False, f"Expected no signal changes from 0% PWM, edge detected from uo_out[{i}]"
+        except Exception as e:
+            pass
+    
+    # Test the value of output
+    assert dut.uo_out.value == 0xFF, f"Expected 0xFF, got {dut.uo_out.value}"
+        
+    # 50% duty cycle
+    dut._log.info("Set PWM to 0% by writing 0b00000000 to register 0x04")
+    dut._log.info("Write transaction, address 0x04, data 0x00")
+    ui_in_val = await send_spi_transaction(dut, 1, 0x04, 0x00)  # Write transaction
+    await ClockCycles(dut.clk, 1000)
+
+    for i in range(0, 8):
+        # Get the period of the output
+        await RisingEdge(dut.uo_out[i])
+        t_rising_edge = get_sim_time(units="ns")
+        dut._log.info(f"t1: {t_rising_edge}")
+
+        await FallingEdge(dut.uo_out[i])
+        t_falling_edge = get_sim_time(units="ns")
+        dut._log.info(f"t2: {t_falling_edge}")
+
+        await RisingEdge(dut.uo_out[i])
+        t_rising_edge2 = get_sim_time(units="ns")
+        dut._log.info(f"t1: {t_rising_edge2}")
+
+        high_time = t_rising_edge - t_falling_edge
+        period = t_rising_edge2 - t_rising_edge
+        duty_cycle = round(float(high_time) / period * 100, 0)
+        assert duty_cycle == 50, f"Expected 50% PWM duty cycle, got {duty_cycle}"
     dut._log.info("PWM Duty Cycle test completed successfully")
