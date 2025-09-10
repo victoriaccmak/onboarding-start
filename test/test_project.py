@@ -86,7 +86,7 @@ async def send_spi_transaction(dut, r_w, address, data):
     return ui_in_logicarray(ncs, bit, sclk)
 
 
-async def check_uo_out_rising_edge(dut, bit_position):
+async def check_uo_out_rising_edge(dut, bit_position) -> int:
     """
     Parameters:
         dut: Any
@@ -222,8 +222,8 @@ async def test_pwm_freq(dut):
     await ClockCycles(dut.clk, 1000)
 
     for i in range(0, 8):
-        t_rising_edge1 = check_uo_out_rising_edge(dut, i)
-        t_rising_edge2 = check_uo_out_rising_edge(dut, i)
+        t_rising_edge1 = await check_uo_out_rising_edge(dut, i)
+        t_rising_edge2 = await check_uo_out_rising_edge(dut, i)
 
         period_ns = t_rising_edge2 - t_rising_edge1
         frequency = 1 / (float(period_ns) * 0.000000001)
@@ -310,9 +310,9 @@ async def test_pwm_duty(dut):
 
     for i in range(0, 8):
         # Get the period of the output
-        t_rising_edge = check_uo_out_rising_edge(dut, i)
-        t_falling_edge = check_uo_out_rising_edge(dut, i)
-        t_rising_edge2 = check_uo_out_rising_edge(dut, i)
+        t_rising_edge = await check_uo_out_rising_edge(dut, i)
+        t_falling_edge = await check_uo_out_falling_edge(dut, i)
+        t_rising_edge2 = await check_uo_out_rising_edge(dut, i)
 
         high_time = t_rising_edge - t_falling_edge
         period = t_rising_edge2 - t_rising_edge
