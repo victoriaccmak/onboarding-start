@@ -84,8 +84,6 @@ module spi_peripheral (
                 end
             end
 
-            // $display("ff_ncs=%b, ncs_sync_ff2=%b, ff_sclk_counter=%0d", ff_ncs, ncs_sync_ff2, ff_sclk_counter);
-
             // transaction done when nCS is pulled high
             if (!ff_ncs && ncs_sync_ff2 && ff_sclk_counter >= 5'b10000) begin
                 address <= {1'b0, bitstream[14:8]};
