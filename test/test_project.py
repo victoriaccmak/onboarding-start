@@ -3,7 +3,7 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, FallingEdge
+from cocotb.triggers import RisingEdge, FallingEdge, Edge
 from cocotb.triggers import ClockCycles
 from cocotb.triggers import with_timeout, First
 # from cocotb.types import Logic
@@ -85,6 +85,42 @@ async def send_spi_transaction(dut, r_w, address, data):
     await ClockCycles(dut.clk, 600)
     return ui_in_logicarray(ncs, bit, sclk)
 
+
+async def check_uo_out_rising_edge(dut, bit_position):
+    """
+    Parameters:
+        dut: Any
+        bit_position: the position of the bit in the vector to check for a rising edge
+    Returns:
+        Returns a time in ns for when the rising edge was detected.
+    """
+    prev = (dut.uo_out.value.integer >> bit_position) & 1
+
+    while True:
+        # Get the current value at a rising edge of the clock
+        await RisingEdge(dut.clk)
+        cur = (dut.uo_out.value.integer >> bit_position) & 1
+        if prev == 0 and cur != 0:
+            time = get_sim_time(units="ns")
+            dut._log.info(f"time: {time}")
+            return time
+        prev = cur
+
+
+async def check_uo_out_falling_edge(dut, bit_position):
+    prev = dut.uo_out.value.integer & (1 << bit_position)
+
+    while True:
+        # Get the current value at a rising edge of the clock
+        await RisingEdge(dut.clk)
+        cur = dut.uo_out.value.integer & (1 << bit_position)
+        if prev != 0 and cur == 0:
+            time = get_sim_time(units="ns")
+            dut._log.info(f"time: {time}")
+            return time
+        prev = cur
+
+        
 @cocotb.test()
 async def test_spi(dut):
     dut._log.info("Start SPI test")
@@ -186,18 +222,12 @@ async def test_pwm_freq(dut):
     await ClockCycles(dut.clk, 1000)
 
     for i in range(0, 8):
-        # Verify the period of the output
-        await RisingEdge(dut.uo_out[i])
-        t_rising_edge1 = get_sim_time(units="ns")
-        dut._log.info(f"t1: {t_rising_edge1}")
-
-        await RisingEdge(dut.uo_out[i])
-        t_rising_edge2 = get_sim_time(units="ns")
-        dut._log.info(f"t2: {t_rising_edge2}")
+        t_rising_edge1 = check_uo_out_rising_edge(dut, i)
+        t_rising_edge2 = check_uo_out_rising_edge(dut, i)
 
         period_ns = t_rising_edge2 - t_rising_edge1
         frequency = 1 / (float(period_ns) * 0.000000001)
-        
+            
         dut._log.info(f"frequency: {frequency}")
         assert frequency >= 2970 and frequency <= 3030, f"Expected frequency between 2970 and 3030 Hz, got {frequency} Hz"
     dut._log.info("PWM Frequency test completed successfully")
@@ -210,7 +240,7 @@ async def test_pwm_duty(dut):
     # Set the clock period to 100 ns (10 MHz)
     clock = Clock(dut.clk, 100, units="ns")
     cocotb.start_soon(clock.start())
-    
+
     dut._log.info("Reset")
     dut.ena.value = 1
     ncs = 1
@@ -240,12 +270,12 @@ async def test_pwm_duty(dut):
 
     # Test for no edges
     for i in range(0, 8):
+        prev = (dut.uo_out.value.integer >> i) & 1
         try:
-            await with_timeout(
-                First(RisingEdge(dut.uo_out[i]), FallingEdge(dut.uo_out[i])),
-                timeout_time=10, timeout_unit="ms"
-            )
-            assert False, f"Expected no signal changes from 0% PWM, edge detected from uo_out[{i}]"
+            await with_timeout(Edge(dut.uo_out), timeout_time=10, timeout_unit="ms")
+            cur = (dut.uo_out.value.integer >> i) & 1
+            if prev != cur:
+                assert False, f"Expected no signal changes from 0% PWM, edge detected from uo_out[{i}]"
         except Exception as e:
             pass
     
@@ -260,12 +290,12 @@ async def test_pwm_duty(dut):
 
     # Test for no edges
     for i in range(0, 8):
+        prev = (dut.uo_out.value.integer >> i) & 1
         try:
-            await with_timeout(
-                First(RisingEdge(dut.uo_out[i]), FallingEdge(dut.uo_out[i])),
-                timeout_time=10, timeout_unit="ms"
-            )
-            assert False, f"Expected no signal changes from 0% PWM, edge detected from uo_out[{i}]"
+            await with_timeout(Edge(dut.uo_out), timeout_time=10, timeout_unit="ms")
+            cur = (dut.uo_out.value.integer >> i) & 1
+            if prev != cur:
+                assert False, f"Expected no signal changes from 0% PWM, edge detected from uo_out[{i}]"
         except Exception as e:
             pass
     
@@ -280,17 +310,9 @@ async def test_pwm_duty(dut):
 
     for i in range(0, 8):
         # Get the period of the output
-        await RisingEdge(dut.uo_out[i])
-        t_rising_edge = get_sim_time(units="ns")
-        dut._log.info(f"t1: {t_rising_edge}")
-
-        await FallingEdge(dut.uo_out[i])
-        t_falling_edge = get_sim_time(units="ns")
-        dut._log.info(f"t2: {t_falling_edge}")
-
-        await RisingEdge(dut.uo_out[i])
-        t_rising_edge2 = get_sim_time(units="ns")
-        dut._log.info(f"t1: {t_rising_edge2}")
+        t_rising_edge = check_uo_out_rising_edge(dut, i)
+        t_falling_edge = check_uo_out_rising_edge(dut, i)
+        t_rising_edge2 = check_uo_out_rising_edge(dut, i)
 
         high_time = t_rising_edge - t_falling_edge
         period = t_rising_edge2 - t_rising_edge
